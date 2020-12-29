@@ -4,17 +4,10 @@ var canvas = document.getElementById("renderCanvas");
 var engine = null;
 var scene = null;
 var sceneToRender = null;
-var sceneWidth = 50;
-var snakeGround = 23;
-var direction;
-var Score = 0;
-var speed = 0.05;
-var isGameOver = false;
+var sceneWidth = 32;
+var snakeGround = 28;
 
-var poison = [];
-var eatables = [];
-var walls = [];
-var headSegment;
+
 
 
 var createDefaultEngine = function () { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false }); };
@@ -100,6 +93,17 @@ var FogMode = function () {
 
 
 var createScene = async function () {
+    var direction;
+    var Score = 0;
+    var speed = 0.01;
+    var isGameOver = false;
+
+    var poison = [];
+    var eatables = [];
+    var walls = [];
+    var headSegment;
+    animations = [];
+    var status = "Play";
 
     var scene = new BABYLON.Scene(engine);
     scene.collisionsEnabled = true;
@@ -110,106 +114,65 @@ var createScene = async function () {
 
     var camera = new BABYLON.FollowCamera("FollowCamera", new BABYLON.Vector3(0, 0, 6), scene);
 
-    camera.radius = 2;
+    camera.radius = 5;
     camera.heightOffet = 5;
-    camera.rotationOffeset = 45;
+    camera.rotationOffeset = 90;
     camera.applyGravity = true;
     camera.ellipsoid = new BABYLON.Vector3(1, 1.8, 1);
+
+    var freeCamera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 10, -20), scene);
+    //freeCamera.attachControl(canvas, true);
+    // This targets the camera to scene origin
+    freeCamera.setTarget(BABYLON.Vector3.Zero());
+    freeCamera.radius = 15;
+    //  Enable camera collisions
+    enableCameraCollision(freeCamera, scene);
+    var moveForward;
+
+
+
     headSegment = await BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "fourAni.glb", scene, function (newMeshes, skeletons, animationGroups) {
-        //     //newMeshes[0].dispose();
+
 
         headSegment = newMeshes[0];
-        //head.setParent(null);
-        //newMeshes[0].setParent(null);
-        // slug.meshes[1].dispose();
-        // slug.isVisible = false;
-        //  head = newMeshes[0];
-        // head =root.getChildMeshes()[0];
-        // //head.clearParent(root);
-        // root.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-        // root.position = new BABYLON.Vector3(2, 1, 2);
-        // head.rotation.x = 90;
-        // head.rotation.z = 90;
-        headSegment.scaling.scaleInPlace(0.3);
-        //head.rotation.x = 90;
-        //  head.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-        headSegment.position = new BABYLON.Vector3(2, 2, 2);
-        // var animationGroup1 = mewMeshes.animationGroups[1];
-        // animationGroup1.normalize(0, 100);
 
-        // const moveForward = scene.getAnimationGroupByName("turnLeft");
+        headSegment.scaling.scaleInPlace(0.2);
+        headSegment.position = new BABYLON.Vector3(2, 1.5, 2);
 
-        // console.log(moveForward);
-        // //Play the Samba animation  
-        // moveForward.start(true, 1.0, moveForward.from, moveForward.to, false);
+
+        // headSegment.ellipsoid = new BABYLON.Vector3(2, 0.5, 2);
+        // headSegment.physicsImpostor = new BABYLON.PhysicsImpostor(headSegment, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+        var collidersVisible = true;
+
+        var boxCollider = BABYLON.Mesh.CreateBox("box1", 0.3, scene);
+        boxCollider.position = new BABYLON.Vector3(2, 1.5, 2);
+        boxCollider.isVisible = collidersVisible;
+
+        // Create a physics root and add all children
+
+        //headSegment.addChild(boxCollider);
+        // physicsRoot.position.y+=4;
+
+        // Enable physics on colliders first then physics root of the mesh
+        //boxCollider.physicsImpostor = new BABYLON.PhysicsImpostor(boxCollider, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0 }, scene);
+        headSegment.physicsImpostor = new BABYLON.PhysicsImpostor(headSegment, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+
+        // Orient the physics root
+        // physicsRoot.rotation.x = Math.PI/5;
+        // physicsRoot.rotation.z = Math.PI/6;
         headSegment.showBoundingBox = true;
-        headSegment.ellipsoid = new BABYLON.Vector3(2, 0.5, 2);
-        headSegment.physicsImpostor = new BABYLON.PhysicsImpostor(headSegment, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.1 }, scene);
         headSegment.rotation.y = Math.PI;
-        const moveForward = scene.getAnimationGroupByName("moveForward");
-        //turnLeft.normalize(0, 100);
-        moveForward.speedRatio = 0.05;
-        moveForward.start(true, 1.0, moveForward.from, moveForward.to, false);
-        // console.log("turnLeft", turnLeft);
-        //   var children  = head.getChildMeshes();
-        //  console.log("mychildren", slug.meshes[0]);
+        moveForward = scene.getAnimationGroupByName("moveForward");
+
+        moveForward.start(true, 0.5, moveForward.from, moveForward.to, false);
+        // moveForward.speedRatio = 1;
         camera.lockedTarget = headSegment;
-        console.log("newMeshes", newMeshes);
+        console.log("headSeg", headSegment);
         console.log("skeletons", skeletons);
         console.log("groupps", animationGroups);
-        // scene.stopAnimation(headSegment)
-        //  console.log("animations",animations);
-        //  var runAnim = scene.getAnimationGroupByName("moveForward");
-        //  runAnim.play();
-        //scene.beginAnimation(head.skeleton, 0, 50, true, 1.0);
+
         return headSegment;
     });
-    // console.log("slug", slug);
-    //camera.attachControl(canvas,true);
-    //     var heady = BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "SlugHelp.babylon", scene, function (newMeshes) {
-    //     head = newMeshes[0];
-    //     head.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-    //     head.position = new BABYLON.Vector3(0, 1, 2);
-    //     head.rotation.x = 90;
-    //     head.rotation.z = 90;
-    //     head.rotation.y = 90;
-    //     camera.lockedTarget = head;
-    //     console.log("newMeshes", newMeshes);
-    //     console.log(head);
-    //     console.log(head.skeletons);
-    //      //bird.rotation = new BABYLON.Vector3(4.5, -3.57, -51.5);
-
-    //      // var translateBird = new BABYLON.Animation("loop", "position.x", 40, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-    //      // var translatex = [];
-    //      // translatex.push({
-    //      //     frame: 0,
-    //      //     value: 4
-    //      // });
-    //      // translatex.push({
-    //      //     frame: 100,
-    //      //     value: 8
-    //      // });
-    //      // translateBird.setKeys(translatex);
-    //      // var rotateBird = new BABYLON.Animation("loop", "rotation.z", 40, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-    //      // var rotatez = [];
-    //      // rotatez.push({
-    //      //     frame: 0,
-    //      //     value: 4.5
-    //      // });
-    //      // rotatez.push({
-    //      //     frame: 100,
-    //      //     value: 273
-    //      // });
-    //      // rotateBird.setKeys(rotatez);
-
-    //      // bird.animations = [translateBird, rotateBird];
-    //      // var nextAnimation = function () {
-    //      //     scene.beginDirectAnimation(bird, [rotateBird], 0, 100, false);
-    //      // };
-    //      // scene.beginDirectAnimation(bird, [translateBird], 0, 100, false, 1, nextAnimation);
-    //      // shadowGenerator.getShadowMap().renderList.push(bird);
-
-    //  });
 
 
     var rotate = function (angle) {
@@ -273,12 +236,7 @@ var createScene = async function () {
     // let camera = new BABYLON.VirtualJoysticksCamera("Camera", new BABYLON.Vector3(0,2.5,0), scene);
     // camera.attachControl(canvas, true);
     //     // This creates and positions a free camera (non-mesh)
-    //    // var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
-    //     camera.attachControl(canvas, true);
-    //     // This targets the camera to scene origin
-    //     camera.setTarget(BABYLON.Vector3.Zero());
-    // Enable camera collisions
-    //enableCameraCollision(camera, scene);
+
 
     //  var camera = new BABYLON.ArcFollowCamera('camera', 0 , 0, 5, headSegment, scene);
     // 	 camera.radius = 10; // how far from the object to follow
@@ -308,7 +266,7 @@ var createScene = async function () {
     var wall1 = BABYLON.MeshBuilder.CreateBox("rect", { width: sceneWidth, height: 2, depth: 2 }, scene);
 
     wall1.position.y = 1;
-    wall1.position.z = 25;
+    wall1.position.z = snakeGround / 2;
     wall1.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall1);
     wall1.physicsImpostor = new BABYLON.PhysicsImpostor(wall1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
@@ -316,7 +274,7 @@ var createScene = async function () {
 
     var wall2 = BABYLON.MeshBuilder.CreateBox("rect1", { width: sceneWidth, height: 2, depth: 2 }, scene);
     wall2.position.y = 1;
-    wall2.position.z = -25;
+    wall2.position.z = -snakeGround / 2;
     wall2.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall2);
     wall2.physicsImpostor = new BABYLON.PhysicsImpostor(wall2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
@@ -324,7 +282,7 @@ var createScene = async function () {
 
     var wall3 = BABYLON.MeshBuilder.CreateBox("rect2", { width: 2, height: 2, depth: sceneWidth - 2 }, scene);
     wall3.position.y = 1;
-    wall3.position.x = 25;
+    wall3.position.x = snakeGround / 2;
     wall3.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall3);
     wall3.physicsImpostor = new BABYLON.PhysicsImpostor(wall3, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
@@ -332,45 +290,45 @@ var createScene = async function () {
 
     var wall4 = BABYLON.MeshBuilder.CreateBox("rect3", { width: 2, height: 2, depth: sceneWidth - 2 }, scene);
     wall4.position.y = 1;
-    wall4.position.x = -25;
+    wall4.position.x = -snakeGround / 2;
     wall4.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall4);
     wall4.physicsImpostor = new BABYLON.PhysicsImpostor(wall4, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
     walls.push(wall4);
 
-    var wall5 = BABYLON.MeshBuilder.CreateBox("rect4", { width: 2, height: 1, depth: 20 }, scene);
-    wall5.position.y = 1;
-    wall5.position.x = -12;
+    var wall5 = BABYLON.MeshBuilder.CreateBox("rect4", { width: 1, height: 2, depth: snakeGround / 4 }, scene);
+    wall5.position.y = 0.5;
+    wall5.position.x = -snakeGround / 4;
     wall5.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall5);
-    wall5.physicsImpostor = new BABYLON.PhysicsImpostor(wall5, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, scene);
+    wall5.physicsImpostor = new BABYLON.PhysicsImpostor(wall5, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
     walls.push(wall5);
 
-    var wall6 = BABYLON.MeshBuilder.CreateBox("rect5", { width: 2, height: 1, depth: 20 }, scene);
-    wall6.position.y = 1;
-    wall6.position.x = 12;
+    var wall6 = BABYLON.MeshBuilder.CreateBox("rect5", { width: 1, height: 2, depth: snakeGround / 4 }, scene);
+    wall6.position.y = 0.5;
+    wall6.position.x = snakeGround / 4;
     wall6.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall6);
-    wall6.physicsImpostor = new BABYLON.PhysicsImpostor(wall6, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, scene);
+    wall6.physicsImpostor = new BABYLON.PhysicsImpostor(wall6, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
     walls.push(wall6);
 
-    var wall7 = BABYLON.MeshBuilder.CreateBox("rect6", { width: 10, height: 1, depth: 2 }, scene);
-    wall7.position.y = 1;
-    wall7.position.z = 10;
+    var wall7 = BABYLON.MeshBuilder.CreateBox("rect6", { width: snakeGround / 4, height: 2, depth: 1 }, scene);
+    wall7.position.y = 0.5;
+    wall7.position.z = snakeGround / 4;
     wall7.position.x = 0;
     wall7.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall7);
-    wall7.physicsImpostor = new BABYLON.PhysicsImpostor(wall7, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, scene);
+    wall7.physicsImpostor = new BABYLON.PhysicsImpostor(wall7, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
     walls.push(wall7);
 
-    var wall8 = BABYLON.MeshBuilder.CreateBox("rect7", { width: 10, height: 1, depth: 2 }, scene);
-    wall8.position.y = 1;
+    var wall8 = BABYLON.MeshBuilder.CreateBox("rect7", { width: snakeGround / 4, height: 2, depth: 1 }, scene);
+    wall8.position.y = 0.5;
     wall8.position.x = 0;
-    wall8.position.z = -10;
+    wall8.position.z = -snakeGround / 4;
     wall8.material = brickMaterial;
     shadowGenerator.getShadowMap().renderList.push(wall8);
     wall8.showBoundingBox = true;
-    wall8.physicsImpostor = new BABYLON.PhysicsImpostor(wall8, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, scene);
+    wall8.physicsImpostor = new BABYLON.PhysicsImpostor(wall8, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
     walls.push(wall8);
 
     // experimenting with node Materials for the ground
@@ -487,80 +445,35 @@ var createScene = async function () {
     skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
     skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     skybox.material = skyboxMaterial;
-
-
-
-
-
-
-    BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "golden-mushroom.obj", scene, function (newMeshes) {
+    var value = await BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "golden-mushroom.obj", scene, function (newMeshes) {
         newMeshes.forEach(function (mesh) {
-            mesh.position = new BABYLON.Vector3(-10, 0, 7);
+
+            mesh.position = new BABYLON.Vector3(-10, 5, 7);
             mesh.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
 
             mesh.isVisible = false;
-            var frameRate = 5;
 
 
-            //Position Animation
-            var xScale = new BABYLON.Animation("xScale", "scaling.x", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
 
-            var keyFramesP = [];
-
-            keyFramesP.push({
-                frame: 0,
-                value: 0.35
-            });
-
-            keyFramesP.push({
-                frame: frameRate,
-                value: 0.3
-            });
-
-            keyFramesP.push({
-                frame: 2 * frameRate,
-                value: 0.35
-            });
-
-
-            xScale.setKeys(keyFramesP);
-
-            //Rotation Animation
-            var yTrans = new BABYLON.Animation("yTrans", "position.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-
-            var keyFramesR = [];
-
-            keyFramesR.push({
-                frame: 0,
-                value: 0.4
-            });
-
-            keyFramesR.push({
-                frame: frameRate,
-                value: 0
-            });
-
-            keyFramesR.push({
-                frame: 2 * frameRate,
-                value: 0.4
-            });
-
-
-            yTrans.setKeys(keyFramesR);
-
-
-            var positionsx = [21, 18, 7, 14, -15, -6, -2, -18, -20]
-            var positionsz = [20, 5, -5, -12, 17, 5, -2, -10, -21]
+            var positionsx = [1, 8, 7, 11, -5, -6, -2, -8, -2]
+            var positionsz = [2, 5, -5, -11, 10, 5, -2, -10, -2]
 
             for (var index = 0; index < 5; index++) {
                 var newInstance = mesh.createInstance("i" + index);
 
                 newInstance.position.x = positionsx[index];
                 newInstance.position.z = positionsz[index];
+
+                // var whaeva = scene.getAnimationGroupByName("Eatables1");
+                // whaeva.start(true, 0.5, whaeva.from, whaeva.to, false);
+                var animating2 = scene.beginDirectAnimation(newInstance, [xScale, yTrans], 0, 2 * frameRate, true);
+                animations.push(animating2);
                 //newInstance.ellipsoid = new BABYLON.Vector3(0.4, 0.8, 0.4);
-                eatables.push(newInstance);
-                scene.beginDirectAnimation(newInstance, [xScale, yTrans], 0, 2 * frameRate, true);
+                poison.push(newInstance);
+                // eatables.push(newInstance);
+
                 shadowGenerator.getShadowMap().renderList.push(newInstance);
+
             }
 
 
@@ -568,76 +481,147 @@ var createScene = async function () {
 
     });
 
+    // Animations
+    var anims = new BABYLON.AnimationGroup("Eatables1");
+    // anims.addTargetedAnimation(animation1, mesh1);
+    // anims.normalize(0, 10);
+    var frameRate = 5;
 
-    BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "10196_Peach.obj", scene, function (newMeshes) {
+
+    //Position Animation
+    var xScale = new BABYLON.Animation("xScale", "scaling.x", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+    var keyFramesP = [];
+
+    keyFramesP.push({
+        frame: 0,
+        value: 0.35
+    });
+
+    keyFramesP.push({
+        frame: frameRate,
+        value: 0.3
+    });
+
+    keyFramesP.push({
+        frame: 2 * frameRate,
+        value: 0.35
+    });
+
+
+    xScale.setKeys(keyFramesP);
+
+    //Rotation Animation
+    var yTrans = new BABYLON.Animation("yTrans", "position.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+    var keyFramesR = [];
+
+    keyFramesR.push({
+        frame: 0,
+        value: 0.4
+    });
+
+    keyFramesR.push({
+        frame: frameRate,
+        value: 0
+    });
+
+    keyFramesR.push({
+        frame: 2 * frameRate,
+        value: 0.4
+    });
+
+
+    yTrans.setKeys(keyFramesR);
+
+    var xRot = new BABYLON.Animation("xRot", "rotation.y", 1, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+    var keyFramesP = [];
+
+    keyFramesP.push({
+        frame: 0,
+        value: -175
+    });
+
+    keyFramesP.push({
+        frame: frameRate,
+        value: -175
+    });
+    keyFramesP.push({
+        frame: 2 * frameRate,
+        value: -175
+    });
+
+
+
+    xRot.setKeys(keyFramesP);
+
+    var yTrans1 = new BABYLON.Animation("yTrans1", "position.y", 10, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+
+    var keyFramesR = [];
+
+    keyFramesR.push({
+        frame: 0,
+        value: 1
+    });
+
+    keyFramesR.push({
+        frame: frameRate,
+        value: 1.5
+    });
+
+    keyFramesR.push({
+        frame: 2 * frameRate,
+        value: 1
+    });
+
+
+
+    yTrans1.setKeys(keyFramesR);
+
+    eatables.forEach(function (mesh) {
+        anims.addTargetedAnimation(yTrans1, mesh);
+        anims.addTargetedAnimation(xRot, mesh);
+    })
+    poison.forEach(function (mesh) {
+        anims.addTargetedAnimation(yTrans, mesh);
+        anims.addTargetedAnimation(xScale, mesh);
+    })
+    // var hey = scene.getAnimationGroupByName("Eatables1");
+    anims.loopAnimation = true;
+
+
+
+
+BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "10196_Peach.obj", scene, function (newMeshes) {
+        console.log("peach", newMeshes);
         newMeshes.forEach(function (mesh) {
-            mesh.position = new BABYLON.Vector3(-10, 1, 7);
+           var mesh = newMeshes[0];
+            mesh.position = new BABYLON.Vector3(-10, 0, 7);
             mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
             mesh.rotation = new BABYLON.Vector3(-17.2, 176, -175);
             mesh.isVisible = false;
             var frameRate = 5;
 
+            var positionsx = [9, 4, 2, 9, -8, -8, -9, -2, -3, -4, -1];
+            var positionsz = [11, 3, -10, -8, 11, 6, -11, -2, -5,-2, -8];
 
-            //Position Animation
-            var xRot = new BABYLON.Animation("xRot", "rotation.y", 1, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-
-            var keyFramesP = [];
-
-            keyFramesP.push({
-                frame: 0,
-                value: -175
-            });
-
-            keyFramesP.push({
-                frame: frameRate,
-                value: -175
-            });
-            keyFramesP.push({
-                frame: 2 * frameRate,
-                value: -175
-            });
-
-
-
-            xRot.setKeys(keyFramesP);
-
-            //Rotation Animation
-            var yTrans = new BABYLON.Animation("yTrans", "position.y", 10, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-
-            var keyFramesR = [];
-
-            keyFramesR.push({
-                frame: 0,
-                value: 1
-            });
-
-            keyFramesR.push({
-                frame: frameRate,
-                value: 1.5
-            });
-
-            keyFramesR.push({
-                frame: 2 * frameRate,
-                value: 1
-            });
-
-
-
-            yTrans.setKeys(keyFramesR);
-
-            var positionsx = [9, 4, 21, 9, -8, -18, -9, -2];
-            var positionsz = [11, 3, -10, -18, 11, 6, -11, -20];
-
-            for (var index = 0; index < 5; index++) {
+console.log("thats how many times");
+            for (var index = 0; index <= positionsx.length; index++) {
                 var newInstance = mesh.createInstance("i" + index);
 
                 newInstance.position.x = positionsx[index];
                 newInstance.position.z = positionsz[index];
+
                 newInstance.rotation = new BABYLON.Vector3(176, -175, -17.2);
+
                 //newInstance.moveWithCollisions(newInstance.speed);
+
+                var animating2 = scene.beginDirectAnimation(newInstance, [xRot, yTrans1], 0, 2 * frameRate, true);
+                animations.push(animating2);
                 eatables.push(newInstance);
-                scene.beginDirectAnimation(newInstance, [xRot, yTrans], 0, 2 * frameRate, true);
                 shadowGenerator.getShadowMap().renderList.push(newInstance);
+            console.log("new Eatables", eatables)
             }
 
 
@@ -679,6 +663,13 @@ var createScene = async function () {
         zChar.position = new BABYLON.Vector3(0, 0.05 * size, 0.9 * size);
     };
     showWorldAxis(5);
+
+    var switchCamera = function (key) {
+
+        if (key.keyCode == 67) {
+            scene.activeCamera = (scene.activeCamera == camera ? freeCamera : camera);
+        }
+    }
 
 
     var onKeyDown = function (key) {
@@ -726,7 +717,7 @@ var createScene = async function () {
                 }
                 // headSegment.rotation.y = Math.PI;
                 headSegment.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
-              //  headSegment.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
+                //  headSegment.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
                 break;
             // key arrow right:
             case 39:
@@ -742,10 +733,10 @@ var createScene = async function () {
                 else if (direction == "-x") {
                     direction = "z"
                 }
-               //  headSegment.rotation.y += -degrees_to_radians(90);
-               headSegment.rotate(BABYLON.Axis.Y, Math.PI/2,BABYLON.Space.LOCAL);
-               //  headSegment.rotate(BABYLON.Axis.Y, Math.PI / 2, BABYLON.Space.LOCAL);
-               // headSegment.scaling.scaleInPlace(0.5);
+                //  headSegment.rotation.y += -degrees_to_radians(90);
+                headSegment.rotate(BABYLON.Axis.Y, Math.PI / 2, BABYLON.Space.LOCAL);
+                //  headSegment.rotate(BABYLON.Axis.Y, Math.PI / 2, BABYLON.Space.LOCAL);
+                // headSegment.scaling.scaleInPlace(0.5);
                 //   const turnRight = scene.getAnimationGroupByName("turnRight");
                 //     turnRight.start(false, 1.0, turnRight.from, turnRight.to, false);
                 //     console.log("turnLeft", turnRight);
@@ -798,22 +789,114 @@ var createScene = async function () {
         });
         advancedTexture.addControl(button1);
     }
-    var scoreBoard = function () {
-        var plane1 = BABYLON.MeshBuilder.CreatePlane("plane", { height: 2, width: 1 });
-        var advancedTexture1 = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(
-            plane1,
-            1024,
-            1024,
-            false
-        );
-        button1 = BABYLON.GUI.Button.CreateImageWithCenterTextButton("but1", Score.toString());
-        button1.width = 3;
-        button1.height = .5;
-        button1.color = "white";
-        button1.fontSize = 200;
-        button1.background = "green";
-        advancedTexture1.addControl(button1);
+    var timing = function () {
+        if (stopTimer && startTime != null) {
+            let curTime = Math.floor((new Date().getTime() - startTime) / 1000) + prevTime;
+            this.time = curTime;
+            clockTime.text = this._formatTime(curTime);
+        }
     }
+    //   var scoreBoard = function () {
+    // var plane1 = BABYLON.MeshBuilder.CreatePlane("plane", { height: 2, width: 1 });
+    // var advancedTexture1 = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(
+    //     plane1,
+    //     1024,
+    //     1024,
+    //     false
+    // );
+    // button1 = BABYLON.GUI.Button.CreateImageWithCenterTextButton("but1", Score.toString());
+    // button1.width = 3;
+    // button1.height = .5;
+    // button1.color = "white";
+    // button1.fontSize = 200;
+    // button1.background = "green";
+    // advancedTexture1.addControl(button1);
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    var panel = new BABYLON.GUI.StackPanel();
+    panel.isVertical = false;
+    panel.height = 1.8;
+    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    advancedTexture.addControl(panel);
+
+    var addButton = function (text, callback) {
+        var button = BABYLON.GUI.Button.CreateSimpleButton("button", text);
+        button.width = "140px";
+        button.height = "40px";
+        button.color = "white";
+        button.background = "green";
+        button.paddingLeft = "10px";
+        button.paddingRight = "10px";
+        button.onPointerUpObservable.add(function () {
+            callback();
+        });
+
+
+        panel.addControl(button);
+    }
+    var points = new BABYLON.GUI.TextBlock();
+    points.name = "clock";
+    // clockTime.textHorizontalAlignment = BABYLON.GUI.TextBlock.HORIZONTAL_ALIGNMENT_CENTER;
+    points.fontSize = "48px";
+    points.color = "white";
+    points.text = "Score : 0";
+    points.resizeToFit = true;
+    points.height = "96px";
+    points.width = "220px";
+    points.fontFamily = "Viga";
+
+    panel.addControl(points);
+    addButton("Pause", function () {
+        status = "Pause";
+        console.log("scene on pause", scene);
+        moveForward.pause();
+        scene.animationGroups.forEach(function (animation) {
+            animation.pause();
+
+        }
+        )
+        animations.forEach(function (animate) {
+            animate.pause();
+        })
+        // scene.animatables.pause();
+        console.log("active mesh", scene)
+    });
+
+    addButton("Play", function () {
+        // moveForward.play();
+        status = "Play";
+        //console.log(scene.animationGroups);
+        scene.animationGroups.forEach(function (animation) {
+            animation.play();
+
+        }
+
+        )
+
+        console.log("eatables", eatables);
+        eatables.forEach(function (mesh) {
+
+
+            var animating2 = scene.beginDirectAnimation(mesh, [xRot, yTrans1], 0, 2 * frameRate, true);
+
+            animations.push(animating2);
+        })
+        poison.forEach(function (mesh) {
+
+            var animating1 = scene.beginDirectAnimation(mesh, [xScale, yTrans], 0, 2 * frameRate, true);
+
+            animations.push(animating1);
+        })
+        // animations.forEach(function (animate){
+        //     animate.play();
+        // })
+    });
+
+    addButton("Reset", function () {
+        loadScene();
+
+    });
+
+    //}
 
 
     var gamePlay = function () {
@@ -821,45 +904,40 @@ var createScene = async function () {
         // console.log("head",headSegment);
 
         // headSegment.moveWithCollisions(.05);
-        if (direction == "z") {
+        if (direction == "z" && status != "Pause" && !isGameOver) {
             headSegment.translate(BABYLON.Axis.Z, speed, BABYLON.Space.WORLD);
         }
-        else if (direction == "-z") {
+        else if (direction == "-z" && status != "Pause" && !isGameOver) {
             headSegment.translate(BABYLON.Axis.Z, -speed, BABYLON.Space.WORLD);
         }
-        else if (direction == "x") {
+        else if (direction == "x" && status != "Pause" && !isGameOver) {
             headSegment.translate(BABYLON.Axis.X, speed, BABYLON.Space.WORLD);
         }
-        else if (direction == "-x") {
+        else if (direction == "-x" && status != "Pause" && !isGameOver) {
             headSegment.translate(BABYLON.Axis.X, -speed, BABYLON.Space.WORLD);
         }
-        // for (var mesh = 0; mesh < eatables.length; mesh++) {
 
+        // if (Score > 1) {
+        //     speed = 0.03;
+        //     moveForward.speedRatio = 0.6;
+        // }
+        // else if (Score > 2) {
+        //     speed = 0.04;
+        //     moveForward.speedRatio = 0.7;
+        // }
+        // else if (Score > 3) {
+        //     speed = 0.05;
+        //     moveForward.speedRatio = 0.8;
+        // }
+        // else if (Score > 4) {
+        //     speed = 0.07;
+        //     moveForward.speedRatio = 1;
+        // }
 
-        //     // intersection
-        //     if (headSegment.intersectsMesh(eatables[mesh], false)) {
-        //         // eatingSound.play();
-        //        // headSegment.material.emissiveColor = new BABYLON.Color3(1, 0, 0);
-        //        eatables[mesh].dispose();
-        //     //    console.log("disposed",eatables[mesh]);
-        //     //    console.log("scene",scene);
-        //         //eatables[mesh].isVisible = false;
-        //         Score += 1;
-        //         speed += 0.001;
-        //         // energySegment.position.x = Math.floor((Math.random() * ((sceneXSize - 1))) + -((sceneXSize - 1) / 2));
-        //         // energySegment.position.z = Math.floor((Math.random() * ((sceneZSize - 1))) + -((sceneZSize - 1) / 2));
-        //         // maxString = Score.toString();
-
-
-        //     }
-        // };
         headSegment.actionManager = new BABYLON.ActionManager(scene);
+
         eatables.forEach(function (mesh) {
-            // if (headSegment.intersectsMesh(mesh, false)) {
-            //     mesh.dispose();
-            //     Score += 1;
-            //     console.log("score is", Score);
-            // }
+
 
             headSegment.actionManager.registerAction(
                 new BABYLON.ExecuteCodeAction(
@@ -871,12 +949,29 @@ var createScene = async function () {
                         }
                     },
                     function () {
-                        mesh.dispose();
-                        Score += 1;
-                        console.log(' Score is', Score);
+                        // console.log("eatables before:", eatables);
+                        // console.log("poison", poison);
+                        // console.log("intersected");
+                        // console.log("disposed mesh", mesh);
+                        // eatables.pop(mesh);
+                        // mesh.dispose();
+                        // console.log("eatables after", eatables);
+                        // console.log("mesh if there",mesh);
+
+                       if (mesh.isVisible == true) {
+                             Score += 1;
+                             speed += 0.01;
+                         }
+                        
+                        mesh.isVisible = false;
+                        // console.log(' Score is', Score);
+                     points.text = "Score : " + Score.toString();
                     }
                 )
             );
+
+
+
         });
 
         walls.forEach(function (wall) {
@@ -890,7 +985,33 @@ var createScene = async function () {
                         }
                     },
                     function () {
+                        console.log("walls", walls)
                         isGameOver = true;
+                        var eat = scene.getAnimationGroupByName("Eat");
+                        moveForward.stop();
+                        eat.start(true, 0.5, eat.from, eat.to, false);
+                        // isGameOver = true;
+                        console.log(' Gameover, Score is', Score);
+                    }
+                )
+            );
+        });
+        poison.forEach(function (mesh) {
+            headSegment.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    {
+                        trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
+                        parameter: {
+                            mesh: mesh,
+                            usePreciseIntersection: false
+                        }
+                    },
+                    function () {
+                        isGameOver = true;
+                        var eat = scene.getAnimationGroupByName("Eat");
+                        moveForward.stop();
+                        eat.start(true, 0.5, eat.from, eat.to, false);
+                        // isGameOver = true;
                         console.log(' Gameover, Score is', Score);
                     }
                 )
@@ -904,15 +1025,17 @@ var createScene = async function () {
         //scoreBoard();
         gamePlay();
         init();
-        // onIntersection(eatables);
+        // onIntersection(eatables); 
     })
 
     scene.registerAfterRender(function () {
 
         canvas.addEventListener("keydown", onKeyDown, false);
+        canvas.addEventListener("keydown", switchCamera, false);
         // canvas.addEventListener("intersection", onIntersection, false);
         scene.onDispose = function () {
             canvas.removeEventListener("keydown", onKeyDown);
+            canvas.removeEventListener("keydown", switchCamera)
 
         }
     })
