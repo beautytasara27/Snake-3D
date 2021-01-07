@@ -1,4 +1,4 @@
-//const { textureEmbedded } = require('./texture.js');
+//global variables in the scene
 var canvas = document.getElementById("renderCanvas");
 
 var engine = null;
@@ -11,17 +11,7 @@ var prevTime = 0;
 var time;
 var isReset = false;
 
-function myScene() {
-    this.canvas = document.getElementById("renderCanvas");
-    this.scene = null;
-    this.sceneToRender = null;
-    this.sceneWidth = 32;
-    this.snakeGround = 28;
-    this.stopTimer, startTime, mString, sString;
-    this.prevTime = 0;
-    this.time;
 
-}
 
 var createDefaultEngine = function () { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false }); };
 
@@ -38,7 +28,7 @@ var enableCameraCollision = function (camera, scene) {
 }
 
 
-
+// functions to minitor the time that has passsed since the game began
 var startTimer = function () {
     startTime = new Date().getTime(); //get the time when we started
     stopTimer = false;
@@ -59,7 +49,7 @@ var formatTime = function () {
     return mString + ":" + sString + day;
 }
 
-
+// function that holds all the scene elements
 var createScene = async function () {
 
 
@@ -73,6 +63,7 @@ var createScene = async function () {
     var walls = [];
     var headSegment;
     animations = [];
+    var moveForward;
     var status = "Play";
 
 
@@ -97,6 +88,7 @@ var createScene = async function () {
     var physicsPlugin = new BABYLON.CannonJSPlugin();
     scene.enablePhysics(gravityVector, physicsPlugin);
 
+    // cameras used
     var camera = new BABYLON.FollowCamera("FollowCamera", new BABYLON.Vector3(0, 0, 0), scene);
     //var camera = new BABYLON.ArcFollowCamera('camera', Math.PI / 4, Math.PI / 4, 5, null, scene);
     camera.radius = 3;
@@ -106,12 +98,7 @@ var createScene = async function () {
     camera.applyGravity = true;
     camera.ellipsoid = new BABYLON.Vector3(1, 1.8, 1);
     camera.inputs.clear();
-    // camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
-    // camera.inputs.removeByType("FollowCameraMouseMoveInput");
-    // camera.cameraRotation.y = 90;
-    // camera.noRotationConstraint = true;
-    // camera.attachControlCanvas = false;
-    //camera.attachControl(canvas, false);
+
 
     var freeCamera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 10, -20), scene);
     freeCamera.inputs.clear();
@@ -120,30 +107,26 @@ var createScene = async function () {
     freeCamera.radius = 15;
     //  Enable camera collisions
     enableCameraCollision(freeCamera, scene);
-    // freeCamera.attachControlCanvas = false;
-    //light similar to the sun
+    
+
+    //light for the scene ,similar to the sun
     var light = new BABYLON.DirectionalLight("*dir00", new BABYLON.Vector3(0, -1, -1), scene);
     light.position = new BABYLON.Vector3(0, 10, 10);
-
-    // Default intensity is 1. dims the light a small amount
     light.intensity = 1;
+
+    //enabling shadows to the sccene
     var shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
     shadowGenerator.useBlurExponentialShadowMap = true;
 
-    var moveForward;
 
+/// naterial for the headSegment which is the main character
     var materialSphere1 = new BABYLON.StandardMaterial("texture1", scene);
     materialSphere1.diffuseColor = new BABYLON.Color3(0.9, 0.4, 0);
-    materialSphere1.roughness = 10;
-    //materialSphere1.specularColor = new BABYLON.Color3(0.9,1,0.7);
+    materialSphere1.roughness = 10;;
     materialSphere1.specularPower = 100;
-    //materialSphere1.useGlossinessFromSpecularMapAlpha = true;
     materialSphere1.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-    //    materialSphere1.diffuseTexture.uScale = 1;
-    //    materialSphere1.diffuseTexture.vScale = 1;
-    //materialSphere1.bumpTexture = bumpTexture1;
-    //mesh.material = materialSphere1;
 
+// importing the main character
     headSegment = await BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "fourAni.glb", scene, function (newMeshes) {
         // newMeshes[0].material = materialSphere1;    
         newMeshes.forEach(function (mesh) {
@@ -153,11 +136,9 @@ var createScene = async function () {
         headSegment = newMeshes[0];
         headSegment.scaling.scaleInPlace(0.25);
         headSegment.position = new BABYLON.Vector3(2, 1.5, 2);
-        // headSegment.rotation.y = Math.PI;
 
         moveForward = scene.getAnimationGroupByName("moveForward");
         moveForward.start(true, 0.5, moveForward.from, moveForward.to, false);
-
         camera.lockedTarget = headSegment;
         headSegment.material = null;
         newMeshes.forEach(function (mesh) {
@@ -166,16 +147,8 @@ var createScene = async function () {
         })
         headSegment.material = materialSphere1;
 
-
-        console.log("meshmeshmesh", headSegment);
-
         return headSegment;
     });
-
-
-    //sphere.material = materialSphere1;
-
-
 
 
 
@@ -246,7 +219,8 @@ var createScene = async function () {
     var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: sceneWidth, height: sceneWidth }, scene);
     ground.material = groundLooks();
     ground.receiveShadows = true;
-
+//
+// sky for our game
     // var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
     // var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
     // skyboxMaterial.backFaceCulling = false;
@@ -256,7 +230,7 @@ var createScene = async function () {
     // skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     // skybox.material = skyboxMaterial;
 
-
+//function for rotation animation
     var rotate = function (angle) {
         var frameRate = 10;
         var yRot = new BABYLON.Animation(
@@ -283,6 +257,7 @@ var createScene = async function () {
         scene.beginDirectAnimation(head, yRot, 0, 2 * frameRate, true);
 
     }
+    // function for up and down animation
     function yTranslate(frameRatey) {
         var yTrans = new BABYLON.Animation("yTrans", "position.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
 
@@ -311,6 +286,7 @@ var createScene = async function () {
 
 
     var frameRate = 5;
+    //function for scaling the mushroom in xAxis : animation
     function xScaling() {
         var xScale = new BABYLON.Animation("xScale", "scaling.x", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
 
@@ -334,10 +310,7 @@ var createScene = async function () {
         return xScale;
     }
 
-    //Position Animation
-
-
-    //Rotation Animation
+  // function for rotating the peach
 
     function xRotation() {
         var xRot = new BABYLON.Animation("xRot", "rotation.y", 1, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
@@ -364,7 +337,7 @@ var createScene = async function () {
         return xRot;
     }
 
-
+//function for up adn down movement in y axis : Animation
     function yTranslation() {
         var yTrans1 = new BABYLON.Animation("yTrans1", "position.y", 10, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
 
@@ -388,22 +361,14 @@ var createScene = async function () {
         return yTrans1;
     }
 
-
-
-
-
-
-
-
-
-
-    BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "10196_Peach.obj", scene, function (newMeshes) {
+// function for importing the peach
+   await BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "10196_Peach.obj", scene, function (newMeshes) {
         console.log("peach", newMeshes);
         newMeshes.forEach(function (mesh) {
             var mesh = newMeshes[0];
             mesh.position = new BABYLON.Vector3(-10, 0, 7);
             mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-            mesh.rotation = new BABYLON.Vector3(-17.2, 176, -175);
+           // mesh.rotation = new BABYLON.Vector3(-17.2, 176, -175);
             mesh.isVisible = false;
             var frameRate = 5;
 
@@ -432,7 +397,9 @@ var createScene = async function () {
         })
 
     });
-    BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "mushroom.babylon", scene, function (newMeshes) {
+
+    //function for importing the mushroom
+    await BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/beautytasara27/Mesh/master/", "mushroom.babylon", scene, function (newMeshes) {
         console.log("peach", newMeshes);
         // newMeshes.forEach(function (mesh) {
         var mesh = newMeshes[0];
@@ -468,7 +435,7 @@ var createScene = async function () {
 
     });
 
-
+//function to switch the camera
     var switchCamera = function (key) {
 
         if (key.keyCode == 67) {
@@ -477,9 +444,8 @@ var createScene = async function () {
     }
 
 
+    // function for moving the slug
     var onKeyDown = function (key) {
-
-
         switch (key.keyCode) {
 
             // key arrow right:
@@ -523,7 +489,7 @@ var createScene = async function () {
 
     }
 
-
+//function for creating the rectangle container of the gui
     function createRectangle(platform, visibility) {
         var rectangle = new BABYLON.GUI.Rectangle();
         rectangle.width = 0.25;
@@ -538,7 +504,7 @@ var createScene = async function () {
         return rectangle;
     }
 
-
+// adding the GUI to the scene
     var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
     var containerGui = new createRectangle(advancedTexture, true)
@@ -566,6 +532,7 @@ var createScene = async function () {
 
     const percentage = "4.5%";
 
+    //function to create the text block for the gui
     function createTextBlock(platform, text) {
         var textBlock = new BABYLON.GUI.TextBlock("text2");
         textBlock.textWrapping = true;
@@ -594,18 +561,8 @@ var createScene = async function () {
     gameover.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
     gameover.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
 
-    //    if (isGameOver){
-
-    //     gameover.text = message;
-    //    }
-
-
-    // }
-
-
-    //gameOver();
-
-
+ 
+// function to add buttons on the gui panel
 
     var addButton = function (platform, text, callback) {
         var button = BABYLON.GUI.Button.CreateSimpleButton("button", text);
@@ -623,7 +580,7 @@ var createScene = async function () {
         platform.addControl(button);
     }
 
-
+//adding button "Play"
     addButton(mainMenu, "Play", function () {
         // moveForward.play();
         if (isReset == true) {
@@ -644,7 +601,7 @@ var createScene = async function () {
         })
         poison.forEach(function (mesh) {
 
-            var animating1 = scene.beginDirectAnimation(mesh, [xScaling()], 0, 2 * frameRate, true);
+            var animating1 = scene.beginDirectAnimation(mesh, [xScaling(), yTranslation()], 0, 2 * frameRate, true);
 
             animations.push(animating1);
         })
@@ -772,10 +729,7 @@ var createScene = async function () {
 
 
     var gamePlay = function () {
-        // scoreBoard();
-        // console.log("head",headSegment);
-
-        // headSegment.moveWithCollisions(.05);
+      //the automated movement of the head depending on the axis and direction
         if (direction == "z" && status != "Pause" && !isGameOver) {
             headSegment.translate(BABYLON.Axis.Z, speed, BABYLON.Space.WORLD);
         }
@@ -791,7 +745,7 @@ var createScene = async function () {
 
 
 
-
+//calculating the time
 
         if (!stopTimer && startTime != null) {
             let curTime = Math.floor((new Date().getTime() - startTime) / 1000) + prevTime;
@@ -800,7 +754,7 @@ var createScene = async function () {
 
             times.text = formatTime(curTime);
         }
-
+//peach appears every 30 seconds
         if (time % 30 == 0) {
 
             eatables.forEach(function (mesh) {
@@ -808,9 +762,10 @@ var createScene = async function () {
             })
         }
 
-
+// registering actions for intersecting mesh
         headSegment.actionManager = new BABYLON.ActionManager(scene);
 
+        //if the mesh in the eatables array intersect with the slug, the mmesh dissapears ie visibility is false
         eatables.forEach(function (mesh) {
 
             headSegment.actionManager.registerAction(
@@ -836,7 +791,7 @@ var createScene = async function () {
             );
 
         });
-
+ //if the mesh in the poison array intersect with the slug, the game is over
         poison.forEach(function (mesh) {
             headSegment.actionManager.registerAction(
                 new BABYLON.ExecuteCodeAction(
@@ -869,7 +824,7 @@ var createScene = async function () {
             );
         });
 
-
+ //if the mesh in the walls array intersect with the slug, the game is over
         walls.forEach(function (wall) {
             headSegment.actionManager.registerAction(
                 new BABYLON.ExecuteCodeAction(
